@@ -1,0 +1,110 @@
+Question 1 & 2
+CREATE TABLE orders (
+    ORDER_REFERENCE VARCHAR2(255) NOT NULL PRIMARY KEY,
+    ORDER_DATE DATE NOT NULL, 
+    SUPPLIER_NAME VARCHAR2(2000), 
+    SUPPLIER_CONTACT_NAME VARCHAR2(255), 
+    SUPPLIER_ADDRESS VARCHAR2(2000),
+    SUPP_CONTACT_NUMBER VARCHAR2(2000),
+    SUPPLIER_EMAIL VARCHAR2(255)); 
+
+
+CREATE TABLE order_details(
+    ORDER_DETAILS_ID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ORDER_TOTAL_AMOUNT VARCHAR2(255), 
+    ORDER_DESCRIPTION VARCHAR2(2000), 
+    ORDER_STATUS VARCHAR2(10) not null, 
+    ORDER_LINE_AMOUNT VARCHAR2(255), 
+    ORDER_REFERENCE VARCHAR2(255),
+    FOREIGN KEY (ORDER_REFERENCE) REFERENCES orders(ORDER_REFERENCE));
+
+
+CREATE TABLE invoices(
+    	INVOICE_ID NUMBER GENERATED ALWAYS AS IDENTITY,
+    	INVOICE_REFERENCE VARCHAR2(255),
+    	INVOICE_DATE DATE, 
+	INVOICE_STATUS VARCHAR2(7) ,
+	INVOICE_HOLD_REASON VARCHAR2(2000 BYTE), 
+	INVOICE_AMOUNT VARCHAR2(255), 
+	INVOICE_DESCRIPTION VARCHAR2(2000 BYTE), 
+    	ORDER_REFERENCE VARCHAR2(255) not NULL,
+    	PRIMARY KEY(INVOICE_ID),
+    	FOREIGN KEY (ORDER_REFERENCE) REFERENCES orders(ORDER_REFERENCE));
+
+Question 3
+CREATE or replace PROCEDURE split_and_insert
+IS
+   y    VARCHAR2(255);
+   CURSOR myCursor IS
+SELECT ORDER_REF,
+    ORDER_DATE,
+	SUPPLIER_NAME,
+	SUPP_CONTACT_NAME,
+	SUPP_ADDRESS,
+	SUPP_CONTACT_NUMBER,
+	SUPP_EMAIL,
+	ORDER_TOTAL_AMOUNT,
+	ORDER_DESCRIPTION,
+	ORDER_STATUS,
+	ORDER_LINE_AMOUNT,
+	INVOICE_REFERENCE,
+	INVOICE_DATE,
+	INVOICE_STATUS,
+	INVOICE_HOLD_REASON,
+	INVOICE_AMOUNT,
+	INVOICE_DESCRIPTION FROM xxbcm_order_mgt;
+
+    orderRef VARCHAR2(255);
+    orderDate VARCHAR2(255);
+    supplierName VARCHAR2(2000);
+    supplierContactName VARCHAR2(255);
+    supplierAddress VARCHAR2(255);
+    supplierContactNumber VARCHAR2(255);
+    supplierEmail VARCHAR2(255);
+    orderTotalAmount VARCHAR2(255);
+    orderDescription VARCHAR2(2000);
+    orderStatus VARCHAR2(10);
+    orderLineAmount VARCHAR2(255);
+    invoiceRef VARCHAR2(255);
+    invoiceDate VARCHAR2(255);
+    invoiceStatus VARCHAR2(7);
+    invoiceHoldReason VARCHAR2(2000);
+    invoiceAmountNumber VARCHAR2(255);
+    invoiceDescription VARCHAR2(2000);
+    BEGIN
+    OPEN myCursor;
+    LOOP
+    FETCH myCursor INTO orderRef ,orderDate ,supplierName ,supplierContactName ,supplierAddress,supplierContactNumber , supplierEmail , orderTotalAmount , orderDescription, orderStatus,
+    orderLineAmount,invoiceRef , invoiceDate ,invoiceStatus , invoiceHoldReason ,invoiceAmountNumber, invoiceDescription ;
+    
+     exit when myCursor%notfound;
+     
+     BEGIN
+            SELECT ORDER_REFERENCE INTO y FROM orders  WHERE ORDER_REFERENCE=orderRef;
+            EXCEPTION WHEN NO_DATA_FOUND THEN
+            INSERT INTO orders(ORDER_REFERENCE, ORDER_DATE, SUPPLIER_NAME, SUPPLIER_CONTACT_NAME, SUPPLIER_ADDRESS, SUPP_CONTACT_NUMBER, SUPPLIER_EMAIL)
+       VALUES( orderRef , to_date(to_char( to_date(orderDate,'DD-MM-YY','NLS_DATE_LANGUAGE=ENGLISH')),'DD-MM-YYYY','NLS_DATE_LANGUAGE=ENGLISH'), supplierName,supplierContactName,supplierAddress,supplierContactNumber,supplierEmail );
+       
+        END;
+        
+       INSERT INTO ORDER_DETAILS( ORDER_TOTAL_AMOUNT, ORDER_DESCRIPTION, ORDER_STATUS, ORDER_LINE_AMOUNT, ORDER_REFERENCE)
+       VALUES( orderTotalAmount , orderDescription, orderStatus,orderLineAmount,orderRef );
+       
+       INSERT INTO invoices( INVOICE_REFERENCE, INVOICE_DATE, INVOICE_STATUS, INVOICE_HOLD_REASON,
+            INVOICE_AMOUNT, INVOICE_DESCRIPTION, ORDER_REFERENCE)
+     VALUES(invoiceRef, to_date(to_char( to_date(invoiceDate,'DD-MM-YY','NLS_DATE_LANGUAGE=ENGLISH')),'DD-MM-YYYY','NLS_DATE_LANGUAGE=ENGLISH'),invoiceStatus,invoiceHoldReason,invoiceAmountNumber,invoiceDescription,orderRef);
+        
+  END LOOP;
+
+  CLOSE myCursor;
+END;
+
+
+EXEC split_and_insert;
+
+    
+    
+    
+    
+    
+
